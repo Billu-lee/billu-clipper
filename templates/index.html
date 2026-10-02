@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube Auto Clipper</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+            display: flex;
+            justify-content: center;
+            padding-top: 100px;
+        }
+
+        .container {
+            width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 42px;
+        }
+
+        input {
+            width: 75%;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            padding: 15px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 30px;
+        }
+
+        img {
+            width: 400px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🎬 Auto Clipper</h1>
+
+    <p>Turn long YouTube videos into Shorts automatically.</p>
+
+    <input
+        id="youtubeUrl"
+        type="text"
+        placeholder="Paste YouTube URL..."
+    >
+
+    <button onclick="generateClips()">
+        Generate Shorts
+    </button>
+
+    <div id="result"></div>
+
+</div>
+
+<script>
+
+async function generateClips() {
+
+    const url = document.getElementById("youtubeUrl").value;
+    const result = document.getElementById("result");
+
+    result.innerHTML = "Analyzing video...";
+
+    try {
+
+        const response = await fetch("/generate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                url: url
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            result.innerHTML =
+                "<p>Error: " + data.error + "</p>";
+            return;
+        }
+
+        const minutes = Math.floor(data.duration / 60);
+        const seconds = data.duration % 60;
+
+        result.innerHTML = `
+            <h2>${data.title}</h2>
+
+            <p>
+                Duration:
+                ${minutes}:${seconds.toString().padStart(2, "0")}
+            </p>
+
+            <img src="${data.thumbnail}">
+
+            <p>✅ Video detected successfully.</p>
+        `;
+
+    } catch (error) {
+
+        result.innerHTML =
+            "<p>Error connecting to server.</p>";
+
+    }
+}
+
+</script>
+
+</body>
+</html>
