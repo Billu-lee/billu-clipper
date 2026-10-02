@@ -1,52 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>YouTube Auto Clipper</title>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>AI Auto Clipper</title>
 
     <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
-            background: #111;
+            background: #0d0d0d;
             color: white;
-            display: flex;
-            justify-content: center;
-            padding-top: 100px;
         }
 
         .container {
-            width: 600px;
-            text-align: center;
+            width: min(1200px, 92%);
+            margin: auto;
+            padding: 50px 0;
         }
 
         h1 {
+            text-align: center;
             font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #999;
+            margin-bottom: 40px;
+        }
+
+        .input-area {
+            max-width: 800px;
+            margin: auto;
+            display: flex;
+            gap: 10px;
         }
 
         input {
-            width: 75%;
-            padding: 15px;
+            flex: 1;
+            padding: 17px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: #181818;
+            color: white;
             font-size: 16px;
-            border-radius: 8px;
-            border: none;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #666;
         }
 
         button {
-            padding: 15px 20px;
-            font-size: 16px;
+            padding: 17px 25px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 15px;
             cursor: pointer;
         }
 
-        #result {
-            margin-top: 30px;
+        #generateButton {
+            background: white;
+            color: black;
         }
 
-        img {
-            width: 400px;
-            border-radius: 10px;
-            margin-top: 20px;
+        #generateButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
+
+        #status {
+            margin-top: 25px;
+            text-align: center;
+            color: #aaa;
+            min-height: 25px;
+        }
+
+        #videoTitle {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .clips {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 35px;
+        }
+
+        .clip-card {
+            background: #171717;
+            border: 1px solid #292929;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .video-container {
+            background: black;
+            display: flex;
+            justify-content: center;
+        }
+
+        video {
+            width: 100%;
+            max-height: 600px;
+            background: black;
+        }
+
+        .clip-info {
+            padding: 20px;
+        }
+
+        .clip-info h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .duration {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .reason {
+            color: #bbb;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .download {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            background: white;
+            color: black;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #ff6b6b !important;
+        }
+
+        @media (max-width: 650px) {
+
+            .input-area {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+        }
+
     </style>
 </head>
 
@@ -54,74 +176,278 @@
 
 <div class="container">
 
-    <h1>🎬 Auto Clipper</h1>
+    <h1>🎬 AI Auto Clipper</h1>
 
-    <p>Turn long YouTube videos into Shorts automatically.</p>
+    <div class="subtitle">
+        Turn long YouTube videos into vertical Shorts automatically
+    </div>
 
-    <input
-        id="youtubeUrl"
-        type="text"
-        placeholder="Paste YouTube URL..."
-    >
+    <div class="input-area">
 
-    <button onclick="generateClips()">
-        Generate Shorts
-    </button>
+        <input
+            id="youtubeUrl"
+            type="text"
+            placeholder="Paste YouTube URL..."
+        >
 
-    <div id="result"></div>
+        <button
+            id="generateButton"
+            onclick="generateShorts()"
+        >
+            Generate Shorts
+        </button>
+
+    </div>
+
+    <div id="status"></div>
+
+    <h2 id="videoTitle"></h2>
+
+    <div
+        id="clips"
+        class="clips"
+    ></div>
 
 </div>
 
+
 <script>
 
-async function generateClips() {
+async function generateShorts() {
 
-    const url = document.getElementById("youtubeUrl").value;
-    const result = document.getElementById("result");
+    const urlInput =
+        document.getElementById("youtubeUrl");
 
-    result.innerHTML = "Analyzing video...";
+    const button =
+        document.getElementById("generateButton");
+
+    const status =
+        document.getElementById("status");
+
+    const clipsContainer =
+        document.getElementById("clips");
+
+    const videoTitle =
+        document.getElementById("videoTitle");
+
+
+    const url = urlInput.value.trim();
+
+
+    if (!url) {
+
+        status.textContent =
+            "Please paste a YouTube URL.";
+
+        status.classList.add("error");
+
+        return;
+    }
+
+
+    status.classList.remove("error");
+
+    button.disabled = true;
+
+    button.textContent =
+        "Processing...";
+
+    status.textContent =
+        "Downloading / analyzing video...";
+
+    clipsContainer.innerHTML = "";
+
+    videoTitle.textContent = "";
+
 
     try {
 
-        const response = await fetch("/generate", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                url: url
-            })
-        });
+        const response = await fetch(
+            "/generate",
+            {
+                method: "POST",
 
-        const data = await response.json();
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-        if (!response.ok) {
-            result.innerHTML =
-                "<p>Error: " + data.error + "</p>";
+                body: JSON.stringify({
+                    url: url
+                })
+            }
+        );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.error ||
+                "Something went wrong."
+            );
+        }
+
+
+        status.textContent =
+            "Shorts generated successfully!";
+
+        videoTitle.textContent =
+            data.title || "Generated Shorts";
+
+
+        if (
+            !data.clips ||
+            data.clips.length === 0
+        ) {
+
+            status.textContent =
+                "No clips were generated.";
+
             return;
         }
 
-        const minutes = Math.floor(data.duration / 60);
-        const seconds = data.duration % 60;
 
-        result.innerHTML = `
-            <h2>${data.title}</h2>
+        data.clips.forEach(
+            (clip, index) => {
 
-            <p>
-                Duration:
-                ${minutes}:${seconds.toString().padStart(2, "0")}
-            </p>
+                const card =
+                    document.createElement("div");
 
-            <img src="${data.thumbnail}">
+                card.className =
+                    "clip-card";
 
-            <p>✅ Video detected successfully.</p>
-        `;
 
-    } catch (error) {
+                const videoWrapper =
+                    document.createElement("div");
 
-        result.innerHTML =
-            "<p>Error connecting to server.</p>";
+                videoWrapper.className =
+                    "video-container";
 
+
+                const video =
+                    document.createElement("video");
+
+                video.controls = true;
+
+                video.preload =
+                    "metadata";
+
+                video.src =
+                    clip.url;
+
+
+                videoWrapper.appendChild(
+                    video
+                );
+
+
+                const info =
+                    document.createElement("div");
+
+                info.className =
+                    "clip-info";
+
+
+                const title =
+                    document.createElement("h3");
+
+                title.textContent =
+                    clip.title ||
+                    `Clip ${index + 1}`;
+
+
+                const duration =
+                    document.createElement("p");
+
+                duration.className =
+                    "duration";
+
+                duration.textContent =
+                    `${clip.duration} seconds`;
+
+
+                const reason =
+                    document.createElement("p");
+
+                reason.className =
+                    "reason";
+
+                reason.textContent =
+                    clip.reason || "";
+
+
+                const download =
+                    document.createElement("a");
+
+                download.className =
+                    "download";
+
+                download.href =
+                    clip.url;
+
+                download.download =
+                    clip.filename;
+
+                download.textContent =
+                    "Download Short";
+
+
+                info.appendChild(
+                    title
+                );
+
+                info.appendChild(
+                    duration
+                );
+
+                info.appendChild(
+                    reason
+                );
+
+                info.appendChild(
+                    download
+                );
+
+
+                card.appendChild(
+                    videoWrapper
+                );
+
+                card.appendChild(
+                    info
+                );
+
+
+                clipsContainer.appendChild(
+                    card
+                );
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        status.classList.add(
+            "error"
+        );
+
+        status.textContent =
+            error.message;
+    }
+
+    finally {
+
+        button.disabled = false;
+
+        button.textContent =
+            "Generate Shorts";
     }
 }
 
